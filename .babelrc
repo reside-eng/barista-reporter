@@ -1,0 +1,39 @@
+{
+  "presets": [
+    ["env", {
+      "targets": {
+        "chrome": 52,
+        "browsers": ["last 2 versions", "safari >= 7"]
+      }
+    }]
+  ],
+  "plugins": [
+    "lodash",
+    "transform-object-rest-spread",
+    "transform-object-assign",
+    "transform-export-extensions"
+  ],
+  "env": {
+    "es": {
+      "comments": false,
+      "plugins": [
+        "transform-inline-environment-variables"
+      ]
+    },
+    "commonjs": {
+      "comments": false,
+      "plugins": [
+        "transform-inline-environment-variables"
+      ]
+    },
+    "test": {
+      "plugins": [
+        "transform-runtime",
+        "transform-async-to-generator",
+        ["module-resolver", {
+         "root": ["./src"]
+       }]
+      ]
+    }
+  }
+}

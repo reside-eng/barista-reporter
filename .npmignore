@@ -1,0 +1,16 @@
+docs
+bin
+examples
+test
+coverage
+.istanbul.yml
+_book
+.babelrc
+SUMMARY.md
+.eslintignore
+.eslintrc
+.github
+yarn.lock
+.travis.yml
+CODE_OF_CONDUCT.md
+CHANGELOG.md

@@ -1,0 +1,14 @@
+# OS
+*.log
+**/*.log
+.DS_Store
+**/.DS_Store
+es
+lib
+
+# Main dependencies
+**/node_modules
+
+serviceAccount.*.json
+serviceAccount.json
+**/dist
