@@ -29,8 +29,6 @@
     },
     "test": {
       "plugins": [
-        "transform-runtime",
-        "transform-async-to-generator",
         ["module-resolver", {
          "root": ["./src"]
        }]
