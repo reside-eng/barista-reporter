@@ -53,7 +53,7 @@ function envVarBasedOnCIEnv(varNameRoot) {
 
 let adminInstance;
 
-function initializeFirbase() {
+function initializeFirebase() {
   try {
     if (!adminInstance) {
       const serviceAccountPath = path.join(
@@ -100,14 +100,15 @@ function sanitizeTest(test) {
 }
 
 function writeToDatabase(dbRef, data) {
+  console.log(`writing to Firebase at path: ${dbRef.path}`);
   return dbRef.update(data).catch(err => {
     console.log(`error writing data to Firebase at path: ${dbRef.path}`); // eslint-disable-line no-console
     return Promise.reject(err);
   });
 }
 
-function MyReporter(runner) {
-  const fbInstance = initializeFirbase();
+export default function MyReporter(runner) {
+  const fbInstance = initializeFirebase();
   const testJobKey = process.env.TEST_JOB_KEY || 'testJobKey';
   const dbRef = fbInstance
     .database()
@@ -188,5 +189,3 @@ function MyReporter(runner) {
     console.log('Test fail: %s -- error: %s', test.title, err.message);
   });
 }
-
-module.exports = MyReporter;
