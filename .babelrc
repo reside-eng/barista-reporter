@@ -9,6 +9,7 @@
   ],
   "plugins": [
     "lodash",
+    "add-module-exports",
     "transform-object-rest-spread",
     "transform-object-assign",
     "transform-export-extensions"
@@ -28,8 +29,6 @@
     },
     "test": {
       "plugins": [
-        "transform-runtime",
-        "transform-async-to-generator",
         ["module-resolver", {
          "root": ["./src"]
        }]
