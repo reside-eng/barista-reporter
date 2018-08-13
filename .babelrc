@@ -11,7 +11,8 @@
     "lodash",
     "transform-object-rest-spread",
     "transform-object-assign",
-    "transform-export-extensions"
+    "transform-export-extensions",
+    "add-module-exports"
   ],
   "env": {
     "es": {
