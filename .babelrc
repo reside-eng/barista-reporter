@@ -9,10 +9,10 @@
   ],
   "plugins": [
     "lodash",
+    "add-module-exports",
     "transform-object-rest-spread",
     "transform-object-assign",
-    "transform-export-extensions",
-    "add-module-exports"
+    "transform-export-extensions"
   ],
   "env": {
     "es": {

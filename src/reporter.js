@@ -107,7 +107,7 @@ function writeToDatabase(dbRef, data) {
   });
 }
 
-export default function BaristaReporter(runner) {
+export default function Reporter(runner) {
   const fbInstance = initializeFirebase();
   const testJobKey = process.env.TEST_JOB_KEY || 'testJobKey';
   const dbRef = fbInstance
