@@ -3,7 +3,15 @@ import mocha from 'mocha';
 import path from 'path';
 import fs from 'fs';
 import admin from 'firebase-admin';
-import { reduce, set, isFunction, isUndefined, omit, get } from 'lodash';
+import {
+  reduce,
+  set,
+  isFunction,
+  isUndefined,
+  omit,
+  get,
+  startCase,
+} from 'lodash';
 import {
   prefixesByCiEnv,
   omitList,
@@ -40,6 +48,7 @@ function envVarBasedOnCIEnv(varNameRoot) {
       'cypress',
       'config.json',
     );
+    console.log('test config path:', localTestConfigPath);
     const configObj = require(localTestConfigPath); // eslint-disable-line global-require, import/no-dynamic-require
     console.log(
       `Running in local environment, ${
@@ -60,6 +69,7 @@ function initializeFirebase() {
         process.cwd(),
         'serviceAccount.json',
       );
+      console.log('serviceAccountPath', serviceAccountPath);
       if (!fs.existsSync(serviceAccountPath)) {
         const missingAccountErr = `Service account not found, check: ${serviceAccountPath}`;
         console.error(missingAccountErr);
@@ -109,16 +119,18 @@ function writeToDatabase(dbRef, data) {
 
 export default function Reporter(runner) {
   const fbInstance = initializeFirebase();
-  const testJobKey = process.env.TEST_JOB_KEY || 'testJobKey';
+  const jobRunKey = process.env.JOB_RUN_KEY || Date.now();
+  const resultsDataPath = process.env.RESULTS_DATA_PATH || 'test_runs_data';
+  const resultsMetaPath = process.env.RESULTS_META_PATH || 'test_runs_meta';
   const dbRef = fbInstance
     .database()
-    .ref('test_results_data')
-    .child(testJobKey);
+    .ref(resultsDataPath)
+    .child(jobRunKey);
 
   const metaRef = fbInstance
     .database()
-    .ref('test_results_meta')
-    .child(testJobKey);
+    .ref(resultsMetaPath)
+    .child(jobRunKey);
 
   mocha.reporters.Base.call(this, runner);
 
@@ -168,15 +180,31 @@ export default function Reporter(runner) {
   runner.on('suite', suite => {
     if (suite.title) {
       currentSuiteTitle = suite.title;
+      writeToDatabase(metaRef.child('stats'), {
+        [`suiteStart-${startCase(suite.title)}`]: get(
+          this,
+          'stats.start',
+          'Not Set',
+        ),
+      });
+    } else {
+      console.log('The suite had no title!', suite);
+      writeToDatabase(metaRef.child('stats'), {
+        startedAt: admin.database.ServerValue.TIMESTAMP,
+        start: get(this, 'stats.start', 'Not Set'),
+      });
     }
   });
+
   runner.on('suite end', () => {
     currentSuiteTitle = '';
   });
+
   runner.on('test', test => {
     writeToDatabase(getTestRef(test), { state: 'pending' });
     writeToDatabase(metaRef, { pending: true });
   });
+
   runner.on('test end', test => {
     writeToDatabase(getTestRef(test), sanitizeTest(test));
   });
@@ -184,8 +212,9 @@ export default function Reporter(runner) {
   runner.on('pass', test => {
     writeToDatabase(getTestRef(test), { state: 'pass' });
   });
+
   runner.on('fail', (test, err) => {
-    writeToDatabase(getTestRef(test), { state: 'failed' });
     console.log('Test fail: %s -- error: %s', test.title, err.message);
+    writeToDatabase(getTestRef(test), { state: 'failed' });
   });
 }
