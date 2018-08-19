@@ -15,8 +15,3 @@ export const omitList = [
   '_currentRetry',
   'parent',
 ];
-
-export const prefixesByCiEnv = {
-  staging: 'STAGE_',
-  production: 'PROD_',
-};

@@ -12,53 +12,7 @@ import {
   get,
   startCase,
 } from 'lodash';
-import {
-  prefixesByCiEnv,
-  omitList,
-  passed,
-  failed,
-  pending,
-} from './constants';
-
-/**
- * Get prefix for current environment based on environment vars available
- * within CI. Falls back to staging (i.e. STAGE)
- * @return {String} Environment prefix string
- */
-function getEnvPrefix() {
-  return (
-    prefixesByCiEnv[process.env.CI_ENVIRONMENT_SLUG] || prefixesByCiEnv.staging
-  );
-}
-
-/**
- * Get environment variable based on the current CI environment
- * @param  {String} varNameRoot - variable name without the environment prefix
- * @return {Any} Value of the environment variable
- * @example
- * envVarBasedOnCIEnv('FIREBASE_PROJECT_ID')
- * // => 'fireadmin-stage' (value of 'STAGE_FIREBASE_PROJECT_ID' environment var)
- */
-function envVarBasedOnCIEnv(varNameRoot) {
-  const prefix = getEnvPrefix();
-  const combined = `${prefix}${varNameRoot}`;
-  if (!process.env.CI && !process.env.CI_ENVIRONMENT_SLUG) {
-    const localTestConfigPath = path.join(
-      process.cwd(),
-      'cypress',
-      'config.json',
-    );
-    console.log('test config path:', localTestConfigPath);
-    const configObj = require(localTestConfigPath); // eslint-disable-line global-require, import/no-dynamic-require
-    console.log(
-      `Running in local environment, ${
-        configObj[combined] ? combined : varNameRoot
-      } is being loaded from cypress/config.json`,
-    );
-    return configObj[combined] || configObj[varNameRoot];
-  }
-  return process.env[combined] || process.env[varNameRoot];
-}
+import { omitList, passed, failed, pending } from './constants';
 
 let adminInstance;
 
@@ -76,11 +30,13 @@ function initializeFirebase() {
         throw new Error(missingAccountErr);
       }
       const serviceAccount = require(serviceAccountPath); // eslint-disable-line global-require, import/no-dynamic-require
+      console.log(
+        'service account exists, project id: ',
+        serviceAccount.project_id,
+      );
       adminInstance = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        databaseURL: `https://${envVarBasedOnCIEnv(
-          'FIREBASE_PROJECT_ID',
-        )}.firebaseio.com`,
+        databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
       });
     }
     return adminInstance;
