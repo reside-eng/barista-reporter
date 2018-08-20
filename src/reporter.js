@@ -95,6 +95,8 @@ function writeToDatabase(dbRef, data) {
 export default function Reporter(runner, options = {}) {
   const fbInstance = initializeFirebase();
   const reporterOptions = get(options, 'reporterOptions', {});
+  console.log('reporter options:', reporterOptions);
+  console.log('reporter env:', process.env.JOB_RUN_KEY);
   const jobRunKey =
     reporterOptions.jobRunKey || process.env.JOB_RUN_KEY || Date.now();
   const resultsDataPath =

@@ -15,16 +15,10 @@
   ],
   "env": {
     "es": {
-      "comments": false,
-      "plugins": [
-        "transform-inline-environment-variables"
-      ]
+      "comments": false
     },
     "commonjs": {
-      "comments": false,
-      "plugins": [
-        "transform-inline-environment-variables"
-      ]
+      "comments": false
     },
     "test": {
       "plugins": [
