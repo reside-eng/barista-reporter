@@ -16,6 +16,11 @@ import { omitList, passed, failed, pending } from './constants';
 
 let adminInstance;
 
+/**
+ * Initialize Firebase instance from service account (from local
+ * serviceAccount.json)
+ * @return {Firebase} Initialized Firebase instance
+ */
 function initializeFirebase() {
   try {
     if (!adminInstance) {
@@ -23,7 +28,6 @@ function initializeFirebase() {
         process.cwd(),
         'serviceAccount.json',
       );
-      console.log('serviceAccountPath', serviceAccountPath);
       if (!fs.existsSync(serviceAccountPath)) {
         const missingAccountErr = `Service account not found, check: ${serviceAccountPath}`;
         console.error(missingAccountErr);
@@ -31,8 +35,9 @@ function initializeFirebase() {
       }
       const serviceAccount = require(serviceAccountPath); // eslint-disable-line global-require, import/no-dynamic-require
       console.log(
-        'service account exists, project id: ',
-        serviceAccount.project_id,
+        `Local Service account exists, project id: ${
+          serviceAccount.project_id
+        }`,
       );
       adminInstance = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
@@ -48,6 +53,12 @@ function initializeFirebase() {
   }
 }
 
+/**
+ * Remove invalid paramters from test object so it can be written to Real
+ * time database
+ * @param  {Object} test - Test object from Mocha event
+ * @return {Object} Sanitized test object
+ */
 function sanitizeTest(test) {
   const cleanedTest = omit(test, omitList);
   return reduce(
@@ -65,10 +76,16 @@ function sanitizeTest(test) {
   );
 }
 
+/**
+ * Write data to Real Time Database
+ * @param  {Firebase.Database.Reference} dbRef - Database reference to write to
+ * @param  {Object} data - Data to write to database
+ * @return {Promise} Resolves with results of database update
+ */
 function writeToDatabase(dbRef, data) {
   console.log(`writing to Firebase at path: ${dbRef.path}`);
   return dbRef.update(data).catch(err => {
-    console.log(`error writing data to Firebase at path: ${dbRef.path}`); // eslint-disable-line no-console
+    console.log(`error writing data to Firebase at path: ${dbRef.path}`);
     return Promise.reject(err);
   });
 }
