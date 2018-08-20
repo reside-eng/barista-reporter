@@ -83,18 +83,28 @@ function sanitizeTest(test) {
  * @return {Promise} Resolves with results of database update
  */
 function writeToDatabase(dbRef, data) {
-  console.log(`writing to Firebase at path: ${dbRef.path}`);
+  console.log(`writing test run data to Firebase at path: ${dbRef.path}`);
   return dbRef.update(data).catch(err => {
-    console.log(`error writing data to Firebase at path: ${dbRef.path}`);
+    console.log(
+      `error writing test run data to Firebase at path: ${dbRef.path}`,
+    );
     return Promise.reject(err);
   });
 }
 
-export default function Reporter(runner) {
+export default function Reporter(runner, options = {}) {
   const fbInstance = initializeFirebase();
-  const jobRunKey = process.env.JOB_RUN_KEY || Date.now();
-  const resultsDataPath = process.env.RESULTS_DATA_PATH || 'test_runs_data';
-  const resultsMetaPath = process.env.RESULTS_META_PATH || 'test_runs_meta';
+  const reporterOptions = get(options, 'reporterOptions', {});
+  const jobRunKey =
+    reporterOptions.jobRunKey || process.env.JOB_RUN_KEY || Date.now();
+  const resultsDataPath =
+    reporterOptions.resultsDataPath ||
+    process.env.RESULTS_DATA_PATH ||
+    'test_runs_data';
+  const resultsMetaPath =
+    reporterOptions.resultsDataPath ||
+    process.env.RESULTS_META_PATH ||
+    'test_runs_meta';
   const dbRef = fbInstance
     .database()
     .ref(resultsDataPath)
@@ -140,7 +150,6 @@ export default function Reporter(runner) {
         writeToDatabase(metaRef.child('stats'), newStats).then(() => {
           const hasFailures =
             failures > 0 || get(existingStats, failures, 0) > 0;
-          console.log('hasFailures', hasFailures);
           if (hasFailures) {
             return writeToDatabase(metaRef, { status: failed, pending: false });
           }
@@ -161,7 +170,6 @@ export default function Reporter(runner) {
         ),
       });
     } else {
-      console.log('The suite had no title!', suite);
       writeToDatabase(metaRef.child('stats'), {
         startedAt: admin.database.ServerValue.TIMESTAMP,
         start: get(this, 'stats.start', 'Not Set'),

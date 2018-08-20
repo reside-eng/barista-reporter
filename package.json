@@ -1,6 +1,6 @@
 {
   "name": "barista-reporter",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Mocha reporter for barista (also works with Cypress).",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -17,8 +17,8 @@
     "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --out-dir lib",
     "build:es": "cross-env BABEL_ENV=es babel src --out-dir es",
     "build": "npm run build:commonjs && npm run build:es",
-    "watch": "npm run build:es -- --watch",
-    "watch:commonjs": "npm run build:commonjs -- --watch",
+    "watch:es": "npm run build:es -- --watch",
+    "watch": "npm run build:commonjs -- --watch",
     "test": "mocha -R spec ./test/unit/**",
     "test:cov": "istanbul cover  $(npm bin)/_mocha ./test/unit/**",
     "codecov": "cat coverage/lcov.info | codecov",
