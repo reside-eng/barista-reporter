@@ -95,10 +95,9 @@ function writeToDatabase(dbRef, data) {
 export default function Reporter(runner, options = {}) {
   const fbInstance = initializeFirebase();
   const reporterOptions = get(options, 'reporterOptions', {});
-  console.log('reporter options:', reporterOptions);
-  console.log('reporter env:', process.env.JOB_RUN_KEY);
   const jobRunKey =
     reporterOptions.jobRunKey || process.env.JOB_RUN_KEY || Date.now();
+  console.log('Job run key:', jobRunKey);
   const resultsDataPath =
     reporterOptions.resultsDataPath ||
     process.env.RESULTS_DATA_PATH ||
@@ -107,27 +106,29 @@ export default function Reporter(runner, options = {}) {
     reporterOptions.resultsDataPath ||
     process.env.RESULTS_META_PATH ||
     'test_runs_meta';
-  const dbRef = fbInstance
-    .database()
-    .ref(resultsDataPath)
-    .child(jobRunKey);
 
   const metaRef = fbInstance
     .database()
     .ref(resultsMetaPath)
-    .child(jobRunKey);
+    .child(jobRunKey)
+    .push();
+
+  const dataRef = fbInstance
+    .database()
+    .ref(resultsDataPath)
+    .child(jobRunKey)
+    .child(metaRef.key);
 
   mocha.reporters.Base.call(this, runner);
 
   let currentSuiteTitle = '';
-
-  function getTestRef(test) {
-    return dbRef.child(currentSuiteTitle).child(test.id);
-  }
+  let currentSuiteRef = dataRef.push();
+  let currentTestRef = currentSuiteRef.push();
 
   runner.on('start', () => {
     writeToDatabase(metaRef, { status: pending, [pending]: true });
   });
+
   runner.on('end', async function onRunnerEnd() {
     const { passes, failures, end } = this.stats;
     console.log('Test run end: %d/%d', passes, passes + failures); // eslint-disable-line no-console
@@ -162,14 +163,18 @@ export default function Reporter(runner, options = {}) {
 
   // when the new test file is loaded
   runner.on('suite', suite => {
+    currentSuiteRef = dataRef.push();
     if (suite.title) {
       currentSuiteTitle = suite.title;
-      writeToDatabase(metaRef.child('stats'), {
-        [`suiteStart-${startCase(suite.title)}`]: get(
-          this,
-          'stats.start',
-          'Not Set',
-        ),
+      writeToDatabase(metaRef, {
+        stats: {
+          [`suiteStart-${startCase(suite.title)}`]: get(
+            this,
+            'stats.start',
+            'Not Set',
+          ),
+        },
+        title: currentSuiteTitle,
       });
     } else {
       writeToDatabase(metaRef.child('stats'), {
@@ -183,21 +188,22 @@ export default function Reporter(runner, options = {}) {
     currentSuiteTitle = '';
   });
 
-  runner.on('test', test => {
-    writeToDatabase(getTestRef(test), { state: 'pending' });
+  runner.on('test', () => {
+    currentTestRef = currentSuiteRef.push();
+    writeToDatabase(currentTestRef, { state: 'pending' });
     writeToDatabase(metaRef, { pending: true });
   });
 
   runner.on('test end', test => {
-    writeToDatabase(getTestRef(test), sanitizeTest(test));
+    writeToDatabase(currentTestRef, sanitizeTest(test));
   });
 
-  runner.on('pass', test => {
-    writeToDatabase(getTestRef(test), { state: 'pass' });
+  runner.on('pass', () => {
+    writeToDatabase(currentTestRef, { state: 'pass' });
   });
 
   runner.on('fail', (test, err) => {
     console.log('Test fail: %s -- error: %s', test.title, err.message);
-    writeToDatabase(getTestRef(test), { state: 'failed' });
+    writeToDatabase(currentTestRef, { state: 'failed' });
   });
 }
