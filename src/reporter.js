@@ -54,6 +54,21 @@ function initializeFirebase() {
 }
 
 /**
+ * Transform an Error object into a JSON object.
+ *
+ * @api private
+ * @param {Error} err
+ * @return {Object}
+ */
+function errorJSON(err) {
+  const res = {};
+  Object.getOwnPropertyNames(err).forEach(key => {
+    res[key] = err[key];
+  }, err);
+  return res;
+}
+
+/**
  * Remove invalid paramters from test object so it can be written to Real
  * time database
  * @param  {Object} test - Test object from Mocha event
@@ -107,9 +122,6 @@ export default function Reporter(runner, options = {}) {
     reporterOptions.resultsDataPath ||
     process.env.RESULTS_META_PATH ||
     'test_runs_meta';
-  const REPORTS_CHILD_PATH = reporterOptions.reportsPath || 'reports';
-  const SUITES_CHILD_PATH = reporterOptions.suitesPath || 'suites';
-  const TESTS_CHILD_PATH = reporterOptions.testsPath || 'tests';
 
   // Create Firebase instance
   const fbInstance = initializeFirebase();
@@ -118,30 +130,29 @@ export default function Reporter(runner, options = {}) {
   const metaRef = fbInstance
     .database()
     .ref(RESULTS_META_PATH)
-    .child(JOB_RUN_KEY)
-    .child(REPORTS_CHILD_PATH)
-    .push();
-  const dataRef = fbInstance
+    .child(JOB_RUN_KEY);
+
+  const reporterRef = fbInstance
     .database()
     .ref(RESULTS_DATA_PATH)
-    .child(JOB_RUN_KEY)
-    .child(REPORTS_CHILD_PATH)
-    .child(metaRef.key);
+    .child(JOB_RUN_KEY);
 
   mocha.reporters.Base.call(this, runner);
 
   let currentSuiteTitle = '';
-  let currentSuiteRef = dataRef.child(SUITES_CHILD_PATH).push();
-  let currentTestRef = currentSuiteRef.child(TESTS_CHILD_PATH).push();
+  let currentSuiteRef = reporterRef;
+  let currentTestRef = currentSuiteRef.child('tests').push();
 
   // Mocha event listeners
+  // Run start
   runner.on('start', () => {
     writeToDatabase(metaRef, { status: pending, [pending]: true });
   });
 
+  // Run complete
   runner.on('end', async function onRunnerEnd() {
     const { passes, failures, end } = this.stats;
-    console.log('Test run end: %d/%d', passes, passes + failures); // eslint-disable-line no-console
+    console.log('Run end: %d/%d', passes, passes + failures); // eslint-disable-line no-console
     await metaRef
       .child('stats')
       .once('value')
@@ -160,23 +171,21 @@ export default function Reporter(runner, options = {}) {
           },
           {},
         );
-        writeToDatabase(metaRef.child('stats'), newStats).then(() => {
-          const hasFailures =
-            failures > 0 || get(existingStats, failures, 0) > 0;
-          if (hasFailures) {
-            return writeToDatabase(metaRef, { status: failed, pending: false });
-          }
-          return writeToDatabase(metaRef, { status: passed, pending: false });
+        const hasFailures = failures > 0 || get(existingStats, failures, 0) > 0;
+        // Update both test ref and meta ref with failure
+        return writeToDatabase(metaRef, {
+          stats: newStats,
+          [pending]: false,
+          status: hasFailures ? failed : passed,
         });
       });
   });
 
-  // when the new test file is loaded
+  // New test file is loaded
   runner.on('suite', suite => {
-    currentSuiteRef = dataRef.child(SUITES_CHILD_PATH).push();
     if (suite.title) {
       currentSuiteTitle = suite.title;
-      writeToDatabase(metaRef, {
+      writeToDatabase(currentSuiteRef, {
         stats: {
           [`suiteStart-${startCase(suite.title)}`]: get(
             this,
@@ -187,33 +196,38 @@ export default function Reporter(runner, options = {}) {
         title: currentSuiteTitle,
       });
     } else {
-      writeToDatabase(metaRef.child('stats'), {
+      writeToDatabase(currentSuiteRef, {
         startedAt: admin.database.ServerValue.TIMESTAMP,
         start: get(this, 'stats.start', 'Not Set'),
       });
     }
+    currentSuiteRef = reporterRef.push();
   });
 
   runner.on('suite end', () => {
     currentSuiteTitle = '';
+    writeToDatabase(currentSuiteRef, {
+      endedAt: admin.database.ServerValue.TIMESTAMP,
+      end: get(this, 'stats.end', 'Not Set'),
+    });
   });
 
   runner.on('test', () => {
-    currentTestRef = currentSuiteRef.child(TESTS_CHILD_PATH).push();
-    writeToDatabase(currentTestRef, { state: 'pending' });
-    writeToDatabase(metaRef, { pending: true });
+    currentTestRef = currentSuiteRef.child('tests').push();
+    writeToDatabase(currentTestRef, { state: pending });
   });
 
   runner.on('test end', test => {
     writeToDatabase(currentTestRef, sanitizeTest(test));
   });
 
+  // Test pass
   runner.on('pass', () => {
-    writeToDatabase(currentTestRef, { state: 'pass' });
+    writeToDatabase(currentTestRef, { state: passed });
   });
 
+  // Test fail
   runner.on('fail', (test, err) => {
-    console.log('Test fail: %s -- error: %s', test.title, err.message);
-    writeToDatabase(currentTestRef, { state: 'failed' });
+    writeToDatabase(currentTestRef, { state: failed, error: errorJSON(err) });
   });
 }
