@@ -93,36 +93,39 @@ function writeToDatabase(dbRef, data) {
 }
 
 export default function Reporter(runner, options = {}) {
-  const fbInstance = initializeFirebase();
+  // Recieve options from reporter options flag
   const reporterOptions = get(options, 'reporterOptions', {});
-  const jobRunKey =
+
+  // Path constants (option with fallback to env or default)
+  const JOB_RUN_KEY =
     reporterOptions.jobRunKey || process.env.JOB_RUN_KEY || Date.now();
-  console.log('Job run key:', jobRunKey);
-  const resultsDataPath =
+  const RESULTS_DATA_PATH =
     reporterOptions.resultsDataPath ||
     process.env.RESULTS_DATA_PATH ||
     'test_runs_data';
-  const resultsMetaPath =
+  const RESULTS_META_PATH =
     reporterOptions.resultsDataPath ||
     process.env.RESULTS_META_PATH ||
     'test_runs_meta';
+  const REPORTS_CHILD_PATH = reporterOptions.reportsPath || 'reports';
+  const SUITES_CHILD_PATH = reporterOptions.suitesPath || 'suites';
+  const TESTS_CHILD_PATH = reporterOptions.testsPath || 'tests';
 
-  const REPORTER_INSTANCES_CHILD_PATH = 'reporterInstances';
-  const SUITES_CHILD_PATH = 'suites';
-  const TESTS_CHILD_PATH = 'tests';
+  // Create Firebase instance
+  const fbInstance = initializeFirebase();
 
+  // Database references
   const metaRef = fbInstance
     .database()
-    .ref(resultsMetaPath)
-    .child(jobRunKey)
-    .child(REPORTER_INSTANCES_CHILD_PATH)
+    .ref(RESULTS_META_PATH)
+    .child(JOB_RUN_KEY)
+    .child(REPORTS_CHILD_PATH)
     .push();
-
   const dataRef = fbInstance
     .database()
-    .ref(resultsDataPath)
-    .child(jobRunKey)
-    .child(REPORTER_INSTANCES_CHILD_PATH)
+    .ref(RESULTS_DATA_PATH)
+    .child(JOB_RUN_KEY)
+    .child(REPORTS_CHILD_PATH)
     .child(metaRef.key);
 
   mocha.reporters.Base.call(this, runner);
@@ -131,6 +134,7 @@ export default function Reporter(runner, options = {}) {
   let currentSuiteRef = dataRef.child(SUITES_CHILD_PATH).push();
   let currentTestRef = currentSuiteRef.child(TESTS_CHILD_PATH).push();
 
+  // Mocha event listeners
   runner.on('start', () => {
     writeToDatabase(metaRef, { status: pending, [pending]: true });
   });
@@ -169,7 +173,7 @@ export default function Reporter(runner, options = {}) {
 
   // when the new test file is loaded
   runner.on('suite', suite => {
-    currentSuiteRef = dataRef.push();
+    currentSuiteRef = dataRef.child(SUITES_CHILD_PATH).push();
     if (suite.title) {
       currentSuiteTitle = suite.title;
       writeToDatabase(metaRef, {
@@ -195,7 +199,7 @@ export default function Reporter(runner, options = {}) {
   });
 
   runner.on('test', () => {
-    currentTestRef = currentSuiteRef.push();
+    currentTestRef = currentSuiteRef.child(TESTS_CHILD_PATH).push();
     writeToDatabase(currentTestRef, { state: 'pending' });
     writeToDatabase(metaRef, { pending: true });
   });
