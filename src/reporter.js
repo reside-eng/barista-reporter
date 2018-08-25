@@ -140,7 +140,7 @@ export default function Reporter(runner, options = {}) {
   mocha.reporters.Base.call(this, runner);
 
   let currentSuiteTitle = '';
-  let currentSuiteRef = reporterRef;
+  let currentSuiteRef = reporterRef.push();
   let currentTestRef = currentSuiteRef.child('tests').push();
 
   // Mocha event listeners
@@ -186,13 +186,11 @@ export default function Reporter(runner, options = {}) {
     if (suite.title) {
       currentSuiteTitle = suite.title;
       writeToDatabase(currentSuiteRef, {
-        stats: {
-          [`suiteStart-${startCase(suite.title)}`]: get(
-            this,
-            'stats.start',
-            'Not Set',
-          ),
-        },
+        [`suiteStart-${startCase(suite.title)}`]: get(
+          this,
+          'stats.start',
+          'Not Set',
+        ),
         title: currentSuiteTitle,
       });
     } else {
@@ -201,24 +199,20 @@ export default function Reporter(runner, options = {}) {
         start: get(this, 'stats.start', 'Not Set'),
       });
     }
-    currentSuiteRef = reporterRef.push();
   });
 
   runner.on('suite end', () => {
     currentSuiteTitle = '';
-    writeToDatabase(currentSuiteRef, {
-      endedAt: admin.database.ServerValue.TIMESTAMP,
-      end: get(this, 'stats.end', 'Not Set'),
-    });
+    currentSuiteRef = reporterRef.push();
   });
 
   runner.on('test', () => {
-    currentTestRef = currentSuiteRef.child('tests').push();
     writeToDatabase(currentTestRef, { state: pending });
   });
 
   runner.on('test end', test => {
     writeToDatabase(currentTestRef, sanitizeTest(test));
+    currentTestRef = currentSuiteRef.child('tests').push();
   });
 
   // Test pass
