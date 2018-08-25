@@ -107,23 +107,29 @@ export default function Reporter(runner, options = {}) {
     process.env.RESULTS_META_PATH ||
     'test_runs_meta';
 
+  const REPORTER_INSTANCES_CHILD_PATH = 'reporterInstances';
+  const SUITES_CHILD_PATH = 'suites';
+  const TESTS_CHILD_PATH = 'tests';
+
   const metaRef = fbInstance
     .database()
     .ref(resultsMetaPath)
     .child(jobRunKey)
+    .child(REPORTER_INSTANCES_CHILD_PATH)
     .push();
 
   const dataRef = fbInstance
     .database()
     .ref(resultsDataPath)
     .child(jobRunKey)
+    .child(REPORTER_INSTANCES_CHILD_PATH)
     .child(metaRef.key);
 
   mocha.reporters.Base.call(this, runner);
 
   let currentSuiteTitle = '';
-  let currentSuiteRef = dataRef.push();
-  let currentTestRef = currentSuiteRef.push();
+  let currentSuiteRef = dataRef.child(SUITES_CHILD_PATH).push();
+  let currentTestRef = currentSuiteRef.child(TESTS_CHILD_PATH).push();
 
   runner.on('start', () => {
     writeToDatabase(metaRef, { status: pending, [pending]: true });
