@@ -53,6 +53,9 @@ export function authWithFirebase() {
   });
 }
 
+let retries = 0;
+const MAX_RETRIES = 3;
+
 /**
  * Write data to Real Time Database
  * @param  {Firebase.Database.Reference} dbRef - Database reference to write to
@@ -60,6 +63,16 @@ export function authWithFirebase() {
  * @return {Promise} Resolves with results of database update
  */
 export function writeToDatabase(dbRef, data) {
+  if (!firebase.auth) {
+    console.log('Auth is not defined. Checking for retries.'); // eslint-disable-line no-console
+    if (retries < MAX_RETRIES) {
+      console.log('Less than three retries, retrying again in a second'); // eslint-disable-line no-console
+      setTimeout(() => {
+        retries += 1;
+        writeToDatabase(dbRef, data);
+      }, 1000);
+    }
+  }
   if (!firebase.auth().currentUser) {
     return authWithFirebase().then(() => writeToDatabase(dbRef, data));
   }

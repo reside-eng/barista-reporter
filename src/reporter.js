@@ -1,7 +1,6 @@
 import mocha from 'mocha';
 import firebase from 'firebase/app';
 import 'firebase/database';
-import 'firebase/auth';
 import {
   reduce,
   set,
@@ -60,7 +59,9 @@ export default function Reporter(runner, options = {}) {
 
   // Path constants (option with fallback to env or default)
   const JOB_RUN_KEY =
-    reporterOptions.jobRunKey || process.env.JOB_RUN_KEY || Date.now();
+    reporterOptions.jobRunKey ||
+    process.env.JOB_RUN_KEY ||
+    `barista/${Date.now()}`;
   const RESULTS_DATA_PATH =
     reporterOptions.resultsDataPath ||
     process.env.RESULTS_DATA_PATH ||
