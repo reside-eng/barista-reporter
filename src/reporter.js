@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 import mocha from 'mocha';
-import path from 'path';
-import fs from 'fs';
-import admin from 'firebase-admin';
+import firebase from 'firebase/app';
+import 'firebase/database';
+import 'firebase/auth';
 import {
   reduce,
   set,
@@ -13,45 +13,11 @@ import {
   startCase,
 } from 'lodash';
 import { omitList, passed, failed, pending } from './constants';
-
-let adminInstance;
-
-/**
- * Initialize Firebase instance from service account (from local
- * serviceAccount.json)
- * @return {Firebase} Initialized Firebase instance
- */
-function initializeFirebase() {
-  try {
-    if (!adminInstance) {
-      const serviceAccountPath = path.join(
-        process.cwd(),
-        'serviceAccount.json',
-      );
-      if (!fs.existsSync(serviceAccountPath)) {
-        const missingAccountErr = `Service account not found, check: ${serviceAccountPath}`;
-        console.error(missingAccountErr);
-        throw new Error(missingAccountErr);
-      }
-      const serviceAccount = require(serviceAccountPath); // eslint-disable-line global-require, import/no-dynamic-require
-      console.log(
-        `Local Service account exists, project id: ${
-          serviceAccount.project_id
-        }`,
-      );
-      adminInstance = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
-      });
-    }
-    return adminInstance;
-  } catch (err) {
-    console.log(
-      'Error initializing firebase-admin instance from service account.',
-    );
-    throw err;
-  }
-}
+import {
+  initializeFirebase,
+  writeToDatabase,
+  authWithFirebase,
+} from './firebaseUtils';
 
 /**
  * Transform an Error object into a JSON object.
@@ -91,22 +57,6 @@ function sanitizeTest(test) {
   );
 }
 
-/**
- * Write data to Real Time Database
- * @param  {Firebase.Database.Reference} dbRef - Database reference to write to
- * @param  {Object} data - Data to write to database
- * @return {Promise} Resolves with results of database update
- */
-function writeToDatabase(dbRef, data) {
-  console.log(`writing test run data to Firebase at path: ${dbRef.path}`);
-  return dbRef.update(data).catch(err => {
-    console.log(
-      `error writing test run data to Firebase at path: ${dbRef.path}`,
-    );
-    return Promise.reject(err);
-  });
-}
-
 export default function Reporter(runner, options = {}) {
   // Recieve options from reporter options flag
   const reporterOptions = get(options, 'reporterOptions', {});
@@ -124,7 +74,8 @@ export default function Reporter(runner, options = {}) {
     'test_runs_meta';
 
   // Create Firebase instance
-  const fbInstance = initializeFirebase();
+  const fbInstance = initializeFirebase(reporterOptions);
+  authWithFirebase();
 
   // Database references
   const metaRef = fbInstance
@@ -195,7 +146,7 @@ export default function Reporter(runner, options = {}) {
       });
     } else {
       writeToDatabase(currentSuiteRef, {
-        startedAt: admin.database.ServerValue.TIMESTAMP,
+        startedAt: firebase.database.ServerValue.TIMESTAMP,
         start: get(this, 'stats.start', 'Not Set'),
       });
     }
