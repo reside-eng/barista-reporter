@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import mocha from 'mocha';
 import firebase from 'firebase/app';
 import 'firebase/database';
@@ -21,8 +20,6 @@ import {
 
 /**
  * Transform an Error object into a JSON object.
- *
- * @api private
  * @param {Error} err
  * @return {Object}
  */
