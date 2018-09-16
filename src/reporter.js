@@ -44,13 +44,13 @@ function sanitizeTest(test) {
 
 export default function Reporter(runner, options = {}) {
   mocha.reporters.Base.call(this, runner);
-  const self = this;
+  const { start, end } = this.stats;
   const suites = [];
   const parentSuites = [];
   const pending = [];
-  let currentSuiteTests = [];
   const failures = [];
   const passes = [];
+  let currentSuiteTests = [];
   let currentSuite = null;
   let hierarchyMode = false;
 
@@ -79,6 +79,9 @@ export default function Reporter(runner, options = {}) {
         title: suite.title,
         tests: [],
       };
+      if (start) {
+        newSuite.start = start;
+      }
       if (hierarchyMode) {
         newSuite.suites = [];
         if (parentSuites.length === 0) {
@@ -103,6 +106,10 @@ export default function Reporter(runner, options = {}) {
       ...passes.map(sanitizeTest),
       ...failures.map(sanitizeTest),
     ];
+    if (end) {
+      currentSuite.end = end;
+    }
+    currentSuite.stats = this.stats;
     currentSuiteTests = [];
   });
 
@@ -128,13 +135,6 @@ export default function Reporter(runner, options = {}) {
   });
 
   runner.once('end', () => {
-    const obj = {
-      stats: self.stats,
-      suites,
-      pending: pending.map(sanitizeTest),
-      failures: failures.map(sanitizeTest),
-      passes: passes.map(sanitizeTest),
-    };
-    sendDataToBaristaApi(baristaApiInstance, sanitizeTest(obj));
+    sendDataToBaristaApi(baristaApiInstance, { suites });
   });
 }
