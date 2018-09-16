@@ -30,7 +30,7 @@
     "prepush": "npm run lint"
   },
   "dependencies": {
-    "firebase": "^5.5.0",
+    "axios": "^0.18.0",
     "lodash": "^4.17.10"
   },
   "peerDependencies": {

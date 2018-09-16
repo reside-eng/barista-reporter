@@ -32,7 +32,7 @@ deploy:
     email: $NPM_EMAIL
     api_key: $NPM_TOKEN
     on:
-      node: '10'
+      node: '8'
       branch: 'master'
   - provider: npm
     skip_cleanup: true
@@ -40,5 +40,5 @@ deploy:
     api_key: $NPM_TOKEN
     tag: next
     on:
-      node: '10'
+      node: '8'
       branch: 'next'
