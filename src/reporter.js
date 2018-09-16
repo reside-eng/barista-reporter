@@ -8,15 +8,13 @@ import {
   get,
   startCase,
 } from 'lodash';
+import * as firebase from 'firebase';
 import { omitList, passed, failed, pending } from './constants';
 import {
   initializeFirebase,
   writeToDatabase,
   authWithFirebase,
 } from './firebaseUtils';
-
-const firebase = require('firebase/app');
-require('firebase/database');
 
 /**
  * Transform an Error object into a JSON object.
