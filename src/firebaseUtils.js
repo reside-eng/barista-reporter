@@ -26,10 +26,31 @@ export function initializeFirebase({ useStage }) {
   }
 }
 
+let authRetries = 0;
+const MAX_RETRIES = 3;
+
 /**
  * Authenticate anonymously with Firebase
  */
 export function authWithFirebase() {
+  if (!firebase.auth) {
+    /* eslint-disable no-console */
+    console.log(
+      'Auth is not defined in authWithFirebase. Checking for retries.',
+    );
+    /* eslint-enable no-console */
+    if (authRetries < MAX_RETRIES) {
+      /* eslint-disable no-console */
+      console.log(
+        'Less than three retries, retrying authWithFirebase again in a second',
+      );
+      /* eslint-enable no-console */
+      setTimeout(() => {
+        authRetries += 1;
+        authWithFirebase();
+      }, 1000);
+    }
+  }
   // Check to see if user is already authed
   if (firebase.auth().currentUser) {
     return Promise.resolve(firebase.auth().currentUser);
@@ -53,8 +74,7 @@ export function authWithFirebase() {
   });
 }
 
-let retries = 0;
-const MAX_RETRIES = 3;
+let writeRetries = 0;
 
 /**
  * Write data to Real Time Database
@@ -63,19 +83,25 @@ const MAX_RETRIES = 3;
  * @return {Promise} Resolves with results of database update
  */
 export function writeToDatabase(dbRef, data) {
+  // Handle auth not being defined
   if (!firebase.auth) {
     console.log('Auth is not defined. Checking for retries.'); // eslint-disable-line no-console
-    if (retries < MAX_RETRIES) {
+    if (writeRetries < MAX_RETRIES) {
       console.log('Less than three retries, retrying again in a second'); // eslint-disable-line no-console
       setTimeout(() => {
-        retries += 1;
+        writeRetries += 1;
         writeToDatabase(dbRef, data);
       }, 1000);
     }
   }
+
+  // Handle current user not being authed
   if (!firebase.auth().currentUser) {
+    console.log('Authing before write to RTDB'); // eslint-disable-line no-console
     return authWithFirebase().then(() => writeToDatabase(dbRef, data));
   }
+
+  // Write to RTDB
   return dbRef.update(data).catch(err => {
     /* eslint-disable no-console */
     console.log(
