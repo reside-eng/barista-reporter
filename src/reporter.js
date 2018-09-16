@@ -1,7 +1,4 @@
 import mocha from 'mocha';
-import firebase from 'firebase/app';
-import 'firebase/database';
-import 'firebase/auth';
 import {
   reduce,
   set,
@@ -17,6 +14,9 @@ import {
   writeToDatabase,
   authWithFirebase,
 } from './firebaseUtils';
+
+const firebase = require('firebase/app');
+require('firebase/database');
 
 /**
  * Transform an Error object into a JSON object.
