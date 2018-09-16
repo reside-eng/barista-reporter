@@ -1,7 +1,8 @@
-import firebase from 'firebase/app';
-import 'firebase/database';
-import 'firebase/auth';
 import { stageFbConfig, prodFbConfig } from './constants';
+
+const firebase = require('firebase/app');
+require('firebase/database');
+require('firebase/auth');
 
 let firebaseInstance;
 
