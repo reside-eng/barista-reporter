@@ -1,6 +1,7 @@
 import mocha from 'mocha';
 import firebase from 'firebase/app';
 import 'firebase/database';
+import 'firebase/auth';
 import {
   reduce,
   set,
