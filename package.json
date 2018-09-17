@@ -1,6 +1,6 @@
 {
   "name": "barista-reporter",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Mocha reporter for barista (also works with Cypress).",
   "main": "lib/index.js",
   "module": "lib/index.js",
@@ -30,7 +30,7 @@
     "prepush": "npm run lint"
   },
   "dependencies": {
-    "firebase": "^5.5.0",
+    "axios": "^0.18.0",
     "lodash": "^4.17.10"
   },
   "peerDependencies": {
