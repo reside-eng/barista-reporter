@@ -114,7 +114,6 @@ export default function Reporter(runner, options = {}) {
   });
 
   runner.on('test end', test => {
-    currentSuite.tests.push(sanitizeTest(test));
     currentSuiteTests.push(sanitizeTest(test));
   });
 
